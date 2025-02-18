@@ -174,9 +174,9 @@ checkType tm ty ctx = do
 
       -- if either side is a variable, add a definition to the context
       -- if this fails, then the user should use contra instead
-      edecl <- Equal.unify m n
+      edecl <- Equal.unify False m n
       -- if proof is a variable, add a definition to the context
-      pdecl <- Equal.unify b TmRefl
+      pdecl <- Equal.unify False b TmRefl
       s <- scope @LocalName
       -- I don't think this join can fail, but we have to check
       r' <- withSNat (scope_size s) $ fromRefinement <$> joinR edecl pdecl
@@ -220,7 +220,7 @@ checkType tm ty ctx = do
                 DS "data arguments, but was given", DC (length args),
                 DS "arguments."
               ]
-          newTele <- substTele delta params theta
+          newTele <- substTele False delta params theta
           (r', ref) <- tcArgTele args newTele ctx
           return ()
         _ ->
@@ -243,7 +243,8 @@ checkType tm ty ctx = do
             let ty1 = applyE @Term (shiftNE (snat @p)) ty'
 
             -- compare scrutinee and pattern: fails if branch is inaccessible
-            defs <- push @LocalName pat $ Equal.unify scrut'' tm'
+            -- Should this be strict mode?
+            defs <- push @LocalName pat $ Equal.unify False scrut'' tm'
 
             r <- fromRefinement <$> joinR r1 defs
                      `Env.whenNothing` [DS "cannot join refinements"]
@@ -328,7 +329,8 @@ tcArgTele (tm : terms) (TCons (LocalDecl ln ty)
           (tele :: Telescope p1 (S n))) ctx = case (axiom @p1 @n) of
     Refl -> do
       checkType tm ty ctx
-      tele' <- doSubst @N1 (tm .: idE) tele
+      -- Should the mode be chosen by the call-site?
+      tele' <- doSubst @N1 True (tm .: idE) tele
       (ss,r) <- tcArgTele terms tele' ctx
       return ((tm .: ss, r) :: (Env Term (p + n) n, Refinement Term n))
 tcArgTele [] _ _ =
@@ -376,11 +378,12 @@ mkSubst' args p = do
 -- theta: the constructor level telescope (i.e. the telescope in which the subst. happens)
 -- This could fail if any constraints are not satisfiable.
 substTele :: forall p1 p2 n.
-             Telescope p1 Z    -- delta
+             Bool              -- strict
+          -> Telescope p1 Z    -- delta
           -> [Term n]          -- params
           -> Telescope p2 p1   -- theta
           -> TcMonad n (Telescope p2 n)
-substTele delta params theta =
+substTele strict delta params theta =
   do (ss :: Env Term (p1 + n) n) <-
         mkSubst' params (Scoped.scopedSize delta)
      s <- scope @LocalName
@@ -388,32 +391,32 @@ substTele delta params theta =
          weaken = withSNat (size delta) $ weakenER (scope_size s)
      let theta' :: Telescope p2 (p1 + n)
          theta' = applyE @Term weaken theta
-     doSubst @p1 ss theta'
+     doSubst @p1 strict ss theta'
 
 -- Propagate the given substitution through a telescope, potentially
 -- reworking the constraints
 
-doSubst :: forall q n p. Env Term (q + n) n -> Telescope p (q + n) -> TcMonad n (Telescope p n)
-doSubst = doSubstRec @q @n s0
+doSubst :: forall q n p. Bool -> Env Term (q + n) n -> Telescope p (q + n) -> TcMonad n (Telescope p n)
+doSubst strict = doSubstRec @q @n strict s0
 
 -- we need to generalize the recursion so that we can increase the scope as we traverse the telescope
-doSubstRec :: forall q n k p. SNat k -> Env Term ((k + q) + n) (k + n) -> Telescope p ((k + q) + n) -> TcMonad (k + n) (Telescope p (k + n))
-doSubstRec k r TNil = return TNil
-doSubstRec k r (TCons e (t :: Telescope p2 m)) = case e of
+doSubstRec :: forall q n k p. Bool -> SNat k -> Env Term ((k + q) + n) (k + n) -> Telescope p ((k + q) + n) -> TcMonad (k + n) (Telescope p (k + n))
+doSubstRec _ k r TNil = return TNil
+doSubstRec strict k r (TCons e (t :: Telescope p2 m)) = case e of
     LocalDef x (tm :: Term ((k + q) + n)) -> case axiomPlusZ @p2 of
       Refl -> do
         let tx' :: Term (k + n)
             tx' = applyE r (Var x)
         let tm' :: Term (k + n)
             tm' = applyE r tm
-        defs  <- Equal.unify tx' tm'
-        (tele' :: Telescope p2 (k + n)) <- doSubstRec @q @n k r t
+        defs  <- Equal.unify strict tx' tm'
+        (tele' :: Telescope p2 (k + n)) <- doSubstRec @q @n strict k r t
         return $ appendDefs defs tele'
 
     LocalDecl nm (ty :: Term ((k + q) + n)) -> do
       let ty' :: Term (k + n)
           ty' = applyE r ty
-      t' <- push @LocalName nm $ doSubstRec @q @n (SS k) (up r) t
+      t' <- push @LocalName nm $ doSubstRec @q @n strict (SS k) (up r) t
       return $ LocalDecl nm ty' <:> t'
 
 
@@ -444,7 +447,7 @@ declarePat p@(PatCon dc (pats :: PatList Pattern p)) ty ctx = do
     Refl -> if Pat.lengthPL pats == toInt (Scoped.scopedSize thetai) then do
       -- case testEquality (size pats) (Scoped.scopedSize thetai) of
       --   Just Refl -> do
-           (tele :: Telescope p2 n) <- substTele delta params thetai
+           (tele :: Telescope p2 n) <- substTele False delta params thetai
            (ctx', tms', r) <- declarePats pats tele ctx
            pure (ctx', DataCon dc tms', r)
             else  Env.err [DS "Wrong number of arguments to data constructor", DC cn]
@@ -462,7 +465,7 @@ declarePats pats (TCons  (LocalDef x ty) (tele :: Telescope p1 n)) ctx = do
     Refl -> do
       let r0 = singletonR (x,ty)
       s <- scope @LocalName
-      tele' <- withSNat (scope_size s) $ doSubst @Z (fromRefinement r0) tele
+      tele' <- withSNat (scope_size s) $ doSubst @Z False (fromRefinement r0) tele
       (ctx', tms', rf)  <- declarePats pats tele' ctx
       let r1 = shiftRefinement (size pats) r0
       r' <-
@@ -671,7 +674,7 @@ exhaustivityCheck scrut ty pats ctx = do
         loop  (Some (PatVar x) : _) dcons = return ()
         loop  (Some (PatCon dc (args :: PatList Pattern p)) : pats') dcons = do
           (ConstructorDef _ (tele :: Telescope p2 p1), dcons') <- removeDCon dc dcons
-          tele' <- substTele delta tys tele
+          tele' <- substTele False delta tys tele
           let (aargs, pats'') = relatedPats dc pats'
                 -- check the arguments of the data constructor together with
                 -- all other related argument lists
@@ -687,7 +690,8 @@ exhaustivityCheck scrut ty pats ctx = do
           scrut' <- Equal.whnf scrut
           this <-
             ( do
-                tele' <- substTele delta tys tele
+                -- Note that using strict mode here would be unsound
+                tele' <- substTele False delta tys tele
                 tcTypeTele tele' ctx
                 case scrut' of
                   DataCon dc' _ | dc /= dc' -> return []
