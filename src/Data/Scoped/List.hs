@@ -3,13 +3,13 @@ module Data.Scoped.List where
 import Data.Nat
 import Data.Kind
 import GHC.IsList
-import GHC.Generics 
+import GHC.Generics
 
 import qualified Data.Foldable as F
 import qualified Control.Monad as M
 
 -- A list of scope indexed types, all with the same scope
--- This module is intended to be used with the OverloadedLists 
+-- This module is intended to be used with the OverloadedLists
 -- Haskell language extension.
 
 -- newtype List a n = MkList [a n]
@@ -18,10 +18,10 @@ data List :: (Nat -> Type) -> Nat -> Type where
    Nil  :: List a n
    (:<) :: a n -> List a n -> List a n
 
-deriving instance Generic1 a => Generic1 (List a)      
+deriving instance Generic1 a => Generic1 (List a)
 deriving instance Ord (a n) => Ord (List a n)
 deriving instance Eq (a n) => Eq (List a n)
-deriving instance Show (a n) => Show (List a n) 
+deriving instance Show (a n) => Show (List a n)
 
 instance Semigroup (List a n) where
    Nil <> l = l
@@ -58,7 +58,7 @@ instance IsList (List v n) where
 
    fromList :: [Item (List v n)] -> List v n
    fromList = F.foldr (:<) Nil
-   
+
    toList :: List v n -> [Item (List v n)]
    toList Nil = []
    toList (x :< xs) = x : toList xs
