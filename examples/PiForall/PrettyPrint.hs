@@ -36,7 +36,7 @@ import Data.List as List
 -- The `disp` function is the main entry point for the pretty printer
 -- While pretty printing, de Bruijn indices are converted into strings
 -- (if possible, using the original names from the source program) using
--- information shored in the DispInfo 
+-- information shored in the DispInfo
 class Display d where
   display :: d -> DispInfo -> Doc e
 
@@ -68,12 +68,12 @@ data DispInfo = forall n. DI
 
 
 -- | Scoped error message quoting
-data D n = DS String 
+data D n = DS String
          | forall a. Display a => DC a  -- closed constant, not a string
          | forall a. Display (a n) => DD (a n)  -- single displayable value
          | forall a. Display (a n) => DL [a n]  -- list of displayable values
 
-initDI :: DispInfo 
+initDI :: DispInfo
 initDI = DI { showAnnots = False,
               dispAvoid = S.empty,
               localNames = [],
@@ -171,8 +171,8 @@ instance Display (ConstructorDef n) where
 instance Display (Telescope m n) where
    display TNil = mempty
    display (TCons (LocalDecl x tm) tele) = do
-    dtm   <- display tm 
-    dtele <- local (push x) (display tele) 
+    dtm   <- display tm
+    dtele <- local (push x) (display tele)
     return $ PP.parens (if x /= internalName then
                     PP.pretty (show x) <+> PP.colon <+> dtm
                 else dtm) <+> dtele
@@ -183,16 +183,16 @@ instance Display (Telescope m n) where
     return $ PP.brackets (dx <+> PP.equals <+> dtm)
 
 instance Display (Refinement Term n) where
-  display (Refinement r) di = 
+  display (Refinement r) di =
     PP.sep (PP.punctuate PP.comma (map d (Map.toList r))) where
-      d (x,tm) = display (Var x) di <+> PP.pretty "=" <+> display tm di 
+      d (x,tm) = display (Var x) di <+> PP.pretty "=" <+> display tm di
 
 -- This is Context n
 instance SNatI m => Display (Env Term m n) where
-  display r di = 
+  display r di =
     let t = tabulate r in
     PP.sep (PP.punctuate PP.comma (map d t)) where
-      d (x,tm) = PP.pretty (show x) <+> PP.pretty "~>" <+> display tm di 
+      d (x,tm) = PP.pretty (show x) <+> PP.pretty "~>" <+> display tm di
 
 
 -------------------------------------------------------------------------
@@ -283,7 +283,7 @@ parens b = if b then PP.parens else id
 brackets :: Bool -> Doc d -> Doc d
 brackets b = if b then PP.brackets else id
 
-nthOpt :: [a] -> Int -> Maybe a 
+nthOpt :: [a] -> Int -> Maybe a
 nthOpt (x:xs) 0 = Just x
 nthOpt (x:xs) n = nthOpt xs (n - 1)
 nthOpt [] _ = Nothing
@@ -306,7 +306,7 @@ instance Display (Term n) where
     dx <- withPrec (levelApp+1) (display x)
     return $ parens (levelApp < n) $ df <+> dx
   display (Pi a bnd) = do
-    Local.unbind bnd $ \(n, b) -> do
+    Local.unbindC bnd $ \(n, b) -> do
       p <- ask prec
       lhs <-
             if Fin.f0 `appearsFree` b
@@ -334,7 +334,7 @@ instance Display (Term n) where
     return $ PP.parens (da <+> PP.pretty "=" <+> db)
 
   display (TyCon "Sigma" [tyA, Lam bnd]) =
-    Local.unbind bnd $ \(x, tyB) -> do
+    Local.unbindC bnd $ \(x, tyB) -> do
       if Fin.f0 `appearsFree` tyB then do
         dx <- display x
         dA <- withPrec 0 $ display tyA
@@ -355,7 +355,7 @@ instance Display (Term n) where
     db <- withPrec levelProd $ display b
     return $ parens (levelProd < p) (da PP.<> PP.pretty "," PP.<> db)
   display (Let a bnd) = do
-    Local.unbind bnd $ \(x, b) -> do
+    Local.unbindC bnd $ \(x, b) -> do
       p <- ask prec
       da <- display a
       dx <- display x
@@ -422,7 +422,7 @@ prettyCase scrut xs =
   if null xs then top <+> PP.pretty "{ }" else
     -- PP.nest 2 (top <> PP.line <> PP.encloseSep open close separator xs)
     PP.nest 2 (top <> PP.hardline <> PP.vsep xs)
---  PP.group (PP.pretty "case" <+> scrut <+> PP.pretty "of" <+> 
+--  PP.group (PP.pretty "case" <+> scrut <+> PP.pretty "of" <+>
 --            PP.align (PP.encloseSep open close separator xs))
 
 
@@ -476,15 +476,15 @@ instance Display LocalName where
 
 -------------------------------------------------------------------------
 
-push :: LocalName -> DispInfo -> DispInfo 
-push n r = r { localNames = n:localNames r} 
-    
+push :: LocalName -> DispInfo -> DispInfo
+push n r = r { localNames = n:localNames r}
+
 pushList :: [LocalName] -> DispInfo -> DispInfo
 pushList ns r = foldl (flip push) r ns
 
 gatherBinders :: Term n -> DispInfo -> ([Doc d], Doc d)
 gatherBinders (Lam b) =
-  Local.unbind b $ \(n, body) -> do
+  Local.unbindC b $ \(n, body) -> do
     dn <- display n
     (rest, body') <- local (push n) $ gatherBinders body
     return (dn : rest, body')
