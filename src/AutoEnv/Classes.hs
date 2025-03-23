@@ -15,7 +15,7 @@ import Data.FinAux
 -- For now, we represent this directly as a function,
 -- but we might want to change that. So we wrap it in
 -- a newtype to hide the representation.
--- newtype Env (v :: Nat -> Type) (m :: Nat) (n :: Nat) = 
+-- newtype Env (v :: Nat -> Type) (m :: Nat) (n :: Nat) =
 --  Env { applyEnv :: Fin m -> v n }
 
 ----------------------------------------------------------
@@ -85,8 +85,8 @@ instance Strengthen Fin where
 
 -- | Calculate the number of binding variables in the pattern
 -- This number does not need to be an explicit parameter of the type
--- so that we have flexibility about what types we can use as 
--- patterns. 
+-- so that we have flexibility about what types we can use as
+-- patterns.
 class Sized (t :: Type) where
   -- Retrieve size from the type (number of variables bound by the pattern)
   type Size t :: Nat
@@ -127,25 +127,25 @@ instance Sized (Vec n a) where
 
 instance Eq a => PatEq (Vec n1 a) (Vec n2 a) where
   patEq VNil VNil = Just Refl
-  patEq (x ::: xs) (y ::: ys) | x == y, 
+  patEq (x ::: xs) (y ::: ys) | x == y,
     Just Refl <- patEq xs ys
     = Just Refl
   patEq _ _ = Nothing
-    
+
 -- ** Unit (trivial)
 
 instance Sized () where { type Size () = N0 ;  size _ = SZ }
 
 instance PatEq () () where patEq _ _ = Just Refl
 
--- ** Pairs 
+-- ** Pairs
 
 instance (Sized a, Sized b) => Sized (a,b) where
    type Size (a,b) = Size a + Size b
    size (x,y) = sPlus (size x) (size y)
 
 instance (PatEq a1 a2, PatEq b1 b2) => PatEq (a1, b1) (a2, b2) where
-   patEq (x1,y1) (x2,y2) 
+   patEq (x1,y1) (x2,y2)
      | Just Refl <- patEq x1 x2
      , Just Refl <- patEq y1 y2
      = Just Refl

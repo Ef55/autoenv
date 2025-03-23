@@ -7,7 +7,7 @@ module AutoEnv.MonadScoped(
   Scope(..),
   emptyScope,
   extendScope,
-  ScopedReader(..), 
+  ScopedReader(..),
   ScopedReaderT(..),
   withSize,
   LocalName(..),
@@ -26,14 +26,14 @@ import Control.Monad.Identity
 -- * Scopes
 -----------------------------------------------------------------------
 
--- | Scopes know how big they are and remember names for printing 
+-- | Scopes know how big they are and remember names for printing
 data Scope name n = Scope {
   scope_size  :: SNat n,       -- number of names in scope
   scope_names :: Vec n name    -- stack of names currently in scope
 } deriving (Eq, Show)
 
--- TODO: should we represent the sequence of names in scope using 
--- a more efficient data structure than a vector? Maybe a size-indexed 
+-- TODO: should we represent the sequence of names in scope using
+-- a more efficient data structure than a vector? Maybe a size-indexed
 -- Data.Sequence?
 
 emptyScope :: Scope name Z
@@ -42,9 +42,9 @@ emptyScope = Scope {
     scope_names = VNil
   }
 
-extendScope :: forall p n name. 
+extendScope :: forall p n name.
   SNatI p => Vec p name -> Scope name n -> Scope name (p + n)
-extendScope v s = Scope { 
+extendScope v s = Scope {
     scope_size  = sPlus (snat @p) (scope_size s),
     scope_names = Vec.append v (scope_names s)
   }
@@ -60,7 +60,7 @@ instance Named name (Scope name n) where
 -----------------------------------------------------------------------
 -- * MonadScoped class
 -----------------------------------------------------------------------
--- | Scoped monads provide implicit access to the current scope 
+-- | Scoped monads provide implicit access to the current scope
 -- and a way to extend that scope with a vector containing new names
 class (forall n. Monad (m n)) => MonadScoped name m | m -> name where
   scope :: m n (Scope name n)
@@ -86,10 +86,10 @@ type ScopedReader name = ScopedReaderT name Identity
 
 -- | A monad transformer that adds a scope environment to any existing monad
 -- This is the Reader monad containing a Scope
--- However, we don't make it an instance of the MonadReader class so that 
+-- However, we don't make it an instance of the MonadReader class so that
 -- the underlying monad can already be a reader.
--- We also cannot make it an instance of the MonadTrans class because 
--- the scope size n needs to be the next-to-last argument instead of the 
+-- We also cannot make it an instance of the MonadTrans class because
+-- the scope size n needs to be the next-to-last argument instead of the
 -- underlying monad
 
 newtype ScopedReaderT name m n a =
@@ -106,8 +106,8 @@ instance Monad m => Monad (ScopedReaderT name m n) where
 
 instance MonadReader e m => MonadReader e (ScopedReaderT name m n) where
   ask = ScopedReaderT (const ask)
-  local f m = ScopedReaderT (\s -> local f (runScopedReaderT m s)) 
-                                       
+  local f m = ScopedReaderT (\s -> local f (runScopedReaderT m s))
+
 
 instance Monad m =>
     MonadScoped name (ScopedReaderT name m) where
@@ -123,7 +123,7 @@ class Sized pat => Named name pat where
     names :: pat -> Vec (Size pat) name
 
 -- Add new names to the current scope
-push :: (MonadScoped name m, Named name pat) => 
+push :: (MonadScoped name m, Named name pat) =>
   pat -> m (Size pat + n) a -> m n a
 push p = withSNat (size p) $ pushVec (names p)
 
@@ -135,7 +135,7 @@ instance Named name (Vec p name) where
   names :: Vec p name -> Vec p name
   names x = x
 
--- TODO: this isn't isn't very good... it doesn't try to 
+-- TODO: this isn't isn't very good... it doesn't try to
 -- "freshen" the names in any way
 instance Named LocalName (SNat p) where
   names :: SNat p -> Vec p LocalName

@@ -7,7 +7,7 @@ module AutoEnv.Bind.Single
   bind,
   unbind,
   getBody,
-  instantiate, 
+  instantiate,
   unbindWith,
   instantiateWith,
   applyUnder) where
@@ -109,15 +109,15 @@ applyUnder ::
 applyUnder f r2 (Bind r1 t) =
   bind (f (up (r1 .>> r2)) t)
 
-instance (SubstVar v, Subst v v, Subst v c, Strengthen c) => 
+instance (SubstVar v, Subst v v, Subst v c, Strengthen c) =>
   Strengthen (Bind v c) where
 
-  strengthenRec :: forall k m n v c. (SubstVar v, Subst v v, Subst v c, Strengthen c) => 
+  strengthenRec :: forall k m n v c. (SubstVar v, Subst v v, Subst v c, Strengthen c) =>
     SNat k -> SNat m -> SNat n -> Bind v c (k + (m + n)) -> Maybe (Bind v c (k + n))
-  strengthenRec k m n bnd = 
+  strengthenRec k m n bnd =
       bind <$> strengthenRec (SNat.succ k) m n (unbind bnd)
-                  
-                  
+
+
 
 -- | Create a substitution that instantiates a binder
 -- with `a` and shifts at the same time. This is useful for

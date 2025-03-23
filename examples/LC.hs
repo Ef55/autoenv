@@ -14,7 +14,7 @@ module LC where
 
 import AutoEnv
 import AutoEnv.Bind.Single
-import Data.FinAux 
+import Data.FinAux
 import Data.Vec qualified
 
 -- | Datatype of well-scoped lambda-calculus expressions
@@ -250,8 +250,8 @@ evalEnv r (Lam b) = applyE r (Lam b)
 evalEnv r (App e1 e2) =
   let v = evalEnv r e2
    in case evalEnv r e1 of
-        Lam b -> 
-          instantiateWith b v evalEnv 
+        Lam b ->
+          instantiateWith b v evalEnv
           -- unbindWith b (\r' e' -> evalEnv (v .: r') e')
         t -> App t v
 

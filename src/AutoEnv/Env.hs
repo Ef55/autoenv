@@ -5,8 +5,8 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE ViewPatterns #-}
-module AutoEnv.Env(Env, applyEnv, 
-  SubstVar(..), Subst(..), 
+module AutoEnv.Env(Env, applyEnv,
+  SubstVar(..), Subst(..),
   GSubst(..), gapplyE, applyOpt,
   transform,
   zeroE,
@@ -40,7 +40,7 @@ module AutoEnv.Env(Env, applyEnv,
 
 import AutoEnv.Lib
 --import AutoEnv.Classes
-import Prelude hiding (head,tail)   
+import Prelude hiding (head,tail)
 import qualified Data.Vec as Vec
 import qualified Data.Map as Map
 import Control.Monad
@@ -72,24 +72,24 @@ applyEnv (s1 :<> s2) x = applyE s2 (applyEnv s1 x)
 
 
 -- | smart constructor for composition
-comp :: forall a m n p. SubstVar a => 
+comp :: forall a m n p. SubstVar a =>
          Env a m n -> Env a n p -> Env a m p
 comp Zero s = Zero
-comp (Weak (k1 :: SNat m1)) (Weak (k2 :: SNat m2))  = 
+comp (Weak (k1 :: SNat m1)) (Weak (k2 :: SNat m2))  =
   case axiomAssoc @m2 @m1 @m of
     Refl -> Weak (sPlus k2 k1)
 comp (Weak SZ) s = s
 comp s (Weak SZ) = s
-comp (WeakR (k1 :: SNat m1)) (WeakR (k2 :: SNat m2))  = 
+comp (WeakR (k1 :: SNat m1)) (WeakR (k2 :: SNat m2))  =
   case axiomAssoc @m @m1 @m2 of
     Refl -> WeakR (sPlus k1 k2)
 comp (WeakR SZ) s =
-  case axiomPlusZ @m of 
+  case axiomPlusZ @m of
     Refl -> s
-comp s (WeakR SZ) = 
-  case axiomPlusZ @n of 
+comp s (WeakR SZ) =
+  case axiomPlusZ @n of
     Refl -> s
-comp (Inc (k1 :: SNat m1)) (Inc (k2 :: SNat m2))  = 
+comp (Inc (k1 :: SNat m1)) (Inc (k2 :: SNat m2))  =
   case axiomAssoc @m2 @m1 @m of
     Refl -> Inc (sPlus k2 k1)
 comp s (Inc SZ) = s
@@ -104,7 +104,7 @@ comp s1 s2 = s1 :<> s2
 -- TODO: does Conor have a name for this?
 transform :: (forall m. a m -> b m) -> Env a n m -> Env b n m
 transform f Zero = Zero
-transform f (Weak x) = Weak x 
+transform f (Weak x) = Weak x
 transform f (WeakR x) = WeakR x
 transform f (Inc x) = Inc x
 transform f (Cons a r) = Cons (f a) (transform f r)
@@ -138,7 +138,7 @@ gapplyE = applyOpt (\s x -> to1 $ gsubst s (from1 x))
 applyOpt :: (Env v n m -> c n -> c m) -> (Env v n m -> c n -> c m)
 applyOpt f (Inc SZ) x = x
 applyOpt f (Weak SZ) x = x
-applyOpt f (WeakR SZ) (x :: c m) = 
+applyOpt f (WeakR SZ) (x :: c m) =
   case axiomPlusZ @m of Refl -> x
 applyOpt f r x = f r x
 {-# INLINEABLE applyOpt #-}
@@ -152,7 +152,7 @@ env :: forall m v n. SNatI m => (Fin m -> v n) -> Env v m n
 env f = fromVec v where
         v :: Vec m (v n)
         v = Vec.tabulate f
-  
+
 
 -- | The empty environment (zero domain)
 zeroE :: Env v Z n
@@ -168,7 +168,7 @@ oneE v = Cons v zeroE
 -- all other indices alone.
 singletonE :: (SubstVar v) => v n -> Env v (S n) n
 singletonE v = v .: idE
- 
+
 -- | identity environment, any size
 idE :: (SubstVar v) => Env v n n
 idE = Inc s0
@@ -205,7 +205,7 @@ appendE SZ e1 e2 = e2
 appendE (snat_ -> SS_ p1) e1 e2 = head e1 .: appendE p1 (tail e1) e2
 
 newtype AppendE v m n p =
-     MkAppendE { getAppendE :: 
+     MkAppendE { getAppendE ::
        Env v p n ->
        Env v m n ->
        Env v (p + m) n }
@@ -231,11 +231,11 @@ shiftNE = Inc
 weakenE' :: forall m v n. SNat m -> Env v n (m + n)
 weakenE' = Weak
 
--- make the bound bigger, on the right, but do not 
--- change any indices. 
+-- make the bound bigger, on the right, but do not
+-- change any indices.
 -- this is an identity function
 weakenER :: forall m v n. SNat m -> Env v n (n + m)
-weakenER = WeakR 
+weakenER = WeakR
 
 
 
@@ -259,11 +259,11 @@ upN p = getUpN @_ @_ @_ @p (withSNat p (induction base step)) where
    step :: forall p1. UpN v m n p1 -> UpN v m n (S p1)
    step (MkUpN r) = MkUpN $ \e -> var FZ .: comp (r e) (Inc s1)
 
-newtype UpN v m n p = 
+newtype UpN v m n p =
     MkUpN { getUpN :: Env v m n -> Env v (p + m) (p + n) }
 
 ----------------------------------------------------
--- Create an environment from a length-indexed 
+-- Create an environment from a length-indexed
 -- vector of scoped values
 
 fromVec :: Vec m (v n) -> Env v m n
@@ -278,30 +278,30 @@ fromVec (x ::: vs) = x .: fromVec vs
 -- Refinements
 ----------------------------------------------------------------
 
--- A refinement is a special kind of substitution that does not 
+-- A refinement is a special kind of substitution that does not
 -- change the scope, it just replaces all uses of a particular variable
--- with some other term (which could mention that variable). 
+-- with some other term (which could mention that variable).
 newtype Refinement v n = Refinement (Map.Map (Fin n) (v n))
 
 emptyR :: Refinement v n
 emptyR = Refinement Map.empty
 
 -- | Note, this operation fails when xs and ys have overlapping domains
-joinR :: forall v n. (SNatI n, Subst v v, Eq (v n)) => 
+joinR :: forall v n. (SNatI n, Subst v v, Eq (v n)) =>
    Refinement v n -> Refinement v n -> Maybe (Refinement v n)
-joinR (Refinement xs) (Refinement ys) = 
+joinR (Refinement xs) (Refinement ys) =
   Refinement <$> foldM f ys xs' where
      xs' = Map.toList xs
      r = fromTable xs'
      f :: Map.Map (Fin n) (v n) -> (Fin n, v n) -> Maybe (Map.Map (Fin n) (v n))
      f m (k,v) | Map.member k ys = Nothing
-               | otherwise = 
+               | otherwise =
                   let v' = applyE r v in
                   Just $ if v' == var k then m else Map.insert k (applyE r v) m
-  
+
 
 singletonR :: (SubstVar v, Eq (v n)) => (Fin n,v n) -> Refinement v n
-singletonR (x, t) = 
+singletonR (x, t) =
   if t == var x then emptyR else Refinement (Map.singleton x t)
 
 
@@ -331,13 +331,13 @@ instance (SNatI n, Show (v m), SubstVar v) => Show (Env v n m) where
 tabulate :: (SNatI n, Subst v v) => Env v n m -> [(Fin n, v m)]
 tabulate r = map (\f -> (f, applyEnv r f)) Fin.universe
 
-fromTable :: forall n v. (SNatI n, SubstVar v) => 
+fromTable :: forall n v. (SNatI n, SubstVar v) =>
   [(Fin n, v n)] -> Env v n n
-fromTable rho = 
-  env $ \f -> case lookup f rho of 
-                Just t -> t 
+fromTable rho =
+  env $ \f -> case lookup f rho of
+                Just t -> t
                 Nothing -> var f
-                                  
+
 --------------------------------------------
 -- Generic implementation of Subst class
 -----------------------------------------------

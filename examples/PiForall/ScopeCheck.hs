@@ -16,7 +16,7 @@ import Data.Maybe (fromJust)
 import qualified PiForall.ConcreteSyntax as C
 import qualified PiForall.Syntax as S
 import AutoEnv.Lib
-             
+
 
 push :: a -> [(a, Fin n)] -> [(a, Fin (S n))]
 push x vs = (x, FZ) : map (fmap FS) vs
@@ -28,7 +28,7 @@ data ScopedPatList n = forall p. SNatI p =>
    ScopedPatList (Pat.PatList S.Pattern p) [(LocalName, Fin (p + n))]
 
 scopeCheckModule :: C.Module -> Maybe S.Module
-scopeCheckModule m = do 
+scopeCheckModule m = do
   entries <- mapM scopeCheckEntry (C.moduleEntries m)
   return $ S.Module {
               S.moduleName = C.moduleName m,
@@ -42,22 +42,22 @@ scopeCheckEntry (C.ModuleDecl gn ty) = S.ModuleDecl gn <$> scopeCheck ty
 scopeCheckEntry (C.ModuleDef gn tm) = S.ModuleDef gn <$> scopeCheck tm
 scopeCheckEntry (C.ModuleData dn datadef) = S.ModuleData dn <$> scopeCheckData datadef
 
-data ScopedTele n = 
-  forall p. SNatI p => ScopedTele [(LocalName, Fin (p + n))] (S.Telescope p n) 
+data ScopedTele n =
+  forall p. SNatI p => ScopedTele [(LocalName, Fin (p + n))] (S.Telescope p n)
 
 scopeCheckData :: C.DataDef -> Maybe S.DataDef
-scopeCheckData (C.DataDef delta s cs) = do 
+scopeCheckData (C.DataDef delta s cs) = do
   ScopedTele scope (delta' :: S.Telescope n Z) <- scopeCheckTele [] delta
-  case axiomPlusZ @n of 
+  case axiomPlusZ @n of
     Refl -> S.DataDef delta' <$> scopeCheck s <*> mapM (scopeCheckConstructor scope) cs
 
 scopeCheckTele :: forall n. SNatI n => [(LocalName, Fin n)] -> C.Telescope -> Maybe (ScopedTele n)
 scopeCheckTele scope [] = Just $ ScopedTele scope Scoped.TNil
-scopeCheckTele scope (C.EntryDecl n ty : entries) = do 
-  ty' <- to scope ty 
+scopeCheckTele scope (C.EntryDecl n ty : entries) = do
+  ty' <- to scope ty
   let scope' :: [(LocalName, Fin (S n))]
       scope' = push n scope
-  ScopedTele (ss    :: [(LocalName, Fin (p + 'S n))]) 
+  ScopedTele (ss    :: [(LocalName, Fin (p + 'S n))])
              (tele' :: S.Telescope p (S n)) <- scopeCheckTele scope' entries
   let fact :: p + S n :~: (p + N1) + n
       fact = axiomAssoc @p @N1 @n
@@ -67,13 +67,13 @@ scopeCheckTele scope (C.EntryDecl n ty : entries) = do
 scopeCheckTele scope (C.EntryDef n tm : entries) = do
   tm' <- to scope tm
   ScopedTele ss (tele' :: S.Telescope p n) <- scopeCheckTele scope entries
-  case axiomPlusZ @p of 
+  case axiomPlusZ @p of
     Refl -> do
       ln <- lookup n scope
       let ret = S.LocalDef ln tm' <:> tele'
       return $ ScopedTele ss ret
 
-scopeCheckConstructor :: SNatI n => [(LocalName, Fin n)] -> C.ConstructorDef 
+scopeCheckConstructor :: SNatI n => [(LocalName, Fin n)] -> C.ConstructorDef
   -> Maybe (S.ConstructorDef n)
 scopeCheckConstructor scope (C.ConstructorDef p dc theta) = do
   ScopedTele _ theta' <- scopeCheckTele scope theta
@@ -83,30 +83,30 @@ scopeCheckConstructor scope (C.ConstructorDef p dc theta) = do
 -- sure that the expression is well scoped
 scopeCheck :: C.Term -> Maybe (S.Term Z)
 scopeCheck = to []
-  
+
 toM :: forall n. SNatI n => [(LocalName, Fin n)] -> C.Match ->
   Maybe (S.Match n)
-toM vs (C.Branch pat tm) = do 
+toM vs (C.Branch pat tm) = do
   ScopedPattern (pat' :: S.Pattern p) vs' <- toP vs pat
   tm' <- withSNat (sPlus (snat :: SNat p) (snat :: SNat n)) $ to vs' tm
   return (S.Branch (Pat.bind pat' tm'))
 
-toP :: SNatI n => [(LocalName, Fin n)] -> 
+toP :: SNatI n => [(LocalName, Fin n)] ->
   C.Pattern -> Maybe (ScopedPattern n)
-toP vs (C.PatVar x) = 
+toP vs (C.PatVar x) =
   return (ScopedPattern (S.PatVar x) ((x, FZ): map (fmap FS) vs))
 toP vs (C.PatCon n pats) = do
   ScopedPatList pats' vs' <- toPL vs pats
   return (ScopedPattern (S.PatCon n pats') vs')
 
-toPL :: forall n. SNatI n => [(LocalName, Fin n)] -> 
+toPL :: forall n. SNatI n => [(LocalName, Fin n)] ->
   [C.Pattern] -> Maybe (ScopedPatList n)
 toPL vs [] = return $ ScopedPatList Pat.PNil vs
 toPL vs (p :ps) = do
   ScopedPattern (p'  :: S.Pattern p) vs' <- toP vs p
   withSNat (sPlus (snat :: SNat p) (snat :: SNat n)) $ do
-      ScopedPatList (ps' :: Pat.PatList S.Pattern p1) vs'' <- 
-    
+      ScopedPatList (ps' :: Pat.PatList S.Pattern p1) vs'' <-
+
           toPL vs' ps
       Refl <- Just (axiomAssoc @p1 @p @n)
       withSNat (sPlus (snat :: SNat p1) (snat :: SNat p)) (return $ ScopedPatList (Pat.PCons p' ps') vs'')
@@ -122,7 +122,7 @@ to vs (C.Pi a x b) = do
   b' <- to ((x, FZ) : map (fmap FS) vs) b
   return (S.Pi a' (L.bind x b'))
 to vs (C.Pos s a) = do
-  a' <- to vs a 
+  a' <- to vs a
   return (S.Pos s a')
 to vs (C.Let x a b) = do
   a' <- to vs a

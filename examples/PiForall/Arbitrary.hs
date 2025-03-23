@@ -1,5 +1,5 @@
--- | This module is for testing the parser/pretty printer. 
--- We would like to satisfy the following roundtrip property: 
+-- | This module is for testing the parser/pretty printer.
+-- We would like to satisfy the following roundtrip property:
 --     * if we generate a random AST term and print it, then it should parse back to an alpha-equivalent term
 
 module PiForall.Arbitrary where
@@ -30,7 +30,7 @@ prop_roundtrip tm
         Right tm' ->
             case scopeCheck tm' of
                 Just stm' ->
-                   QC.counterexample ("*** Round trip failure! Parsing:\n" ++ str ++ 
+                   QC.counterexample ("*** Round trip failure! Parsing:\n" ++ str ++
                    "\n** printed from \n" ++ show stm ++
                    "\n*** results in\n" ++ show stm' ++
                    "\n*** printed as\n" ++ pp stm') (stm == stm')
@@ -48,14 +48,14 @@ test_parseExpr = testParser arbConstructorNames expr
 
 ---------------------------------------------------------------------------------------------------
 -- Generators for the pi-forall expression AST
--- These generation functions and Arbitrary instances are tailored for testing the pretty printer 
+-- These generation functions and Arbitrary instances are tailored for testing the pretty printer
 -- and parser. As a result, they do not generate "unprintable" parts of the AST, such as type annotations
 -- and source code positions.
 
 
 -- * Names
 
--- | variable names 
+-- | variable names
 -- drawn from a small list
 genName :: Gen LocalName
 genName = LocalName <$> elements ["x", "y", "z", "x0" , "y0"]
@@ -93,7 +93,7 @@ base = elements [TyType, {- TrustMe, PrintMe, -}
           litFalse = {- SOLN DATA -} DataCon "False" [] {- STUBWITH LitBool False -}
 
 -- Generate a random term
--- In the inner recursion, the bool prevents the generation of TyCon/DataCon applications 
+-- In the inner recursion, the bool prevents the generation of TyCon/DataCon applications
 -- inside Apps --- we want these terms to be fully saturated.
 genTerm :: Int -> Gen Term
 genTerm n
@@ -107,7 +107,7 @@ genTerm n
               (1, App <$> go False n' <*> genTerm n'),
               (1, genPi n'),
               (1, genLet n'),
-              {- 
+              {-
               (1, TyEq <$> go True n' <*> go True n'),
               (1, Subst <$> go True n' <*> go True n'),
               (1, Contra <$> go True n'),

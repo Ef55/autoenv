@@ -25,7 +25,7 @@ data Exp (n :: Nat) where
     (Bind Exp Exp n) ->
     Exp n
   LetRec ::
-    -- | "let rec x = e1 in e2" where x is bound in both e1 and e2  
+    -- | "let rec x = e1 in e2" where x is bound in both e1 and e2
     Bind Exp Exp n ->
     Bind Exp Exp n ->
     Exp n

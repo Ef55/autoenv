@@ -26,15 +26,15 @@ data Term
   | Var LocalName
   | Global GlobalName
   | Pi Typ LocalName Term
-  | Pos SourcePos Term 
+  | Pos SourcePos Term
   | Let LocalName Term Term
   | TyCon TyConName [Typ]
   | DataCon DataConName [Term]
   | Case Term [Match]
-  | App Term Term 
-  | Ann Term Typ 
+  | App Term Term
+  | Ann Term Typ
   | TyEq Term Term
-  | Subst Term Term 
+  | Subst Term Term
   | TmRefl
   | Contra Term
   | TrustMe
@@ -46,7 +46,7 @@ data Term
 -- `n` is the number of free variables in type annotations in the pattern
 -- LocalName is used for printing only, irrelevant for alpha-equivalence
 data Pattern where
-  PatCon :: DataConName -> [Pattern] -> Pattern 
+  PatCon :: DataConName -> [Pattern] -> Pattern
   PatVar :: LocalName -> Pattern
     deriving (Eq, Show)
 
@@ -66,7 +66,7 @@ data Entry where
 -- 'p' is the number of variables introduced by the telescope
 -- 'n' is the scope depth for A1 (and A2 has depth S n, etc.)
 type Telescope = [Entry]
-  
+
 -- | add a new local entry to a telescope
 (<:>) :: Telescope -> Entry -> Telescope
 t <:> e = t ++ [e]
@@ -78,22 +78,22 @@ data ModuleEntry
   | ModuleData { declName :: GlobalName, declData :: DataDef }
 
 -- | Datatype definitions
-data DataDef = 
+data DataDef =
   DataDef
-  { 
+  {
     data_params :: Telescope,
     data_sort :: Typ,
     data_constructors :: [ConstructorDef]
   }
 
-data ConstructorDef = 
+data ConstructorDef =
   ConstructorDef
   { con_pos :: SourcePos,
     con_name :: DataConName,
-    con_arguments :: Telescope 
+    con_arguments :: Telescope
   }
 
-newtype ScopedConstructorDef = 
+newtype ScopedConstructorDef =
   ScopedConstructorDef (Telescope, ConstructorDef)
 
 ------------------------------------------------------------------
@@ -128,7 +128,7 @@ isPatVar :: Pattern -> Bool
 isPatVar (PatVar _) = True
 isPatVar _ = False
 
-strip :: Term -> Term 
+strip :: Term -> Term
 strip (Pos _ tm) = strip tm
 strip (Ann tm _) = strip tm
 strip tm = tm

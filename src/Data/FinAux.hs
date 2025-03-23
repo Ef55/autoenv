@@ -21,8 +21,8 @@ module Data.FinAux(
   strengthenRecFin
  ) where
 
-import Data.Nat 
-import Data.SNat 
+import Data.Nat
+import Data.SNat
 import Data.Fin hiding (cata)
 import Data.Proxy (Proxy (..))
 
@@ -30,14 +30,14 @@ import Data.Proxy (Proxy (..))
 import Unsafe.Coerce(unsafeCoerce)
 
 -------------------------------------------------------------------------------
--- toInt 
+-- toInt
 -------------------------------------------------------------------------------
 
 -- >>> :t toInteger
 -- toInteger :: Integral a => a -> Integer
 
--- The `toInteger` instance has an unnecessary 
--- type class constraint (NatI n) for Fin. So we 
+-- The `toInteger` instance has an unnecessary
+-- type class constraint (NatI n) for Fin. So we
 -- also include this class for simple conversion.
 instance ToInt (Fin n) where
   toInt :: Fin n -> Int
@@ -55,31 +55,31 @@ instance ToInt (Fin n) where
 
 -- | Convert an "index" Fin to a "level" Fin and vice versa
 invert :: forall n. SNatI n => Fin n -> Fin n
-invert f = case snat @n of 
+invert f = case snat @n of
   SZ -> case f of {}
   SS -> maxBound - f
-  
+
 -------------------------------------------------------------------------------
 -- Shifting and weakening
 -------------------------------------------------------------------------------
 
 -- Weakening: Adding a new binding to the context without changing existing
--- indices. 
--- Shifting: Adjusting the indices of free variables within a term to 
--- reflect a new binding added to the context. 
+-- indices.
+-- Shifting: Adjusting the indices of free variables within a term to
+-- reflect a new binding added to the context.
 
--- Shifting functions add some specified amount to the given 
+-- Shifting functions add some specified amount to the given
 -- `Fin` value, also incrementing its type.
 
 -- Shifting is implemented in the Data.Fin libary using the `weakenRight`
--- function, which changes the value of a Fin and its type. 
+-- function, which changes the value of a Fin and its type.
 -- >>> :t weakenRight
 -- weakenRight :: SNatI n => Proxy n -> Fin m -> Fin (Plus n m)
 
 -- >>> weakenRight (Proxy :: Proxy N1) (f1 :: Fin N2) :: Fin N3
 -- 2
 
--- In this module, we call the same operation `shiftN` and give 
+-- In this module, we call the same operation `shiftN` and give
 -- it a slightly more convenient interface.
 -- >>> shiftN s1 (f1 :: Fin N2)
 -- 2
@@ -95,11 +95,11 @@ shiftN p f = withSNat p $ weakenRight (Proxy :: Proxy n) f
 -- Weakening
 -------------------------------------------------------------------------------
 
--- Weakenening changes the bound of a nat-indexed type without changing 
+-- Weakenening changes the bound of a nat-indexed type without changing
 -- its value.
 -- These operations can either be defined for the n-ary case (as in Fin below)
 -- or be defined in terms of a single-step operation.
--- However, as both of these operations are identity functions, 
+-- However, as both of these operations are identity functions,
 -- it is justified to use unsafeCoerce.
 
 -- The corresponding function in the Data.Fin library is `weakenLeft`.
@@ -114,8 +114,8 @@ shiftN p f = withSNat p $ weakenRight (Proxy :: Proxy n) f
 --
 -- weakenFin m f = withSNat m $ weakenLeft (Proxy :: Proxy m) f
 --
--- But, by using an `unsafeCoerce` implementation, we can avoid the 
--- `SNatI n` constraint in the type of this operation. 
+-- But, by using an `unsafeCoerce` implementation, we can avoid the
+-- `SNatI n` constraint in the type of this operation.
 
 -- >>> weakenFin (Proxy :: Proxy N1) (f1 :: Fin N2) :: Fin N3
 -- 1
@@ -138,7 +138,7 @@ weakenFinRight m f = unsafeCoerce f
 -- Aliases
 -------------------------------------------------------------------------------
 
--- Convenient names for fin values. These have polymorphic types so they 
+-- Convenient names for fin values. These have polymorphic types so they
 -- will work in any scope. (These are also called fin0, fin1, fin2, etc
 -- in Data.Fin)
 
@@ -158,8 +158,8 @@ f3 = FS f2
 -- Strengthening
 -------------------------------------------------------------------------------
 
--- With strengthening, we make sure that variable f0 is not used, 
--- and we decrement all other indices by 1. This allows us to 
+-- With strengthening, we make sure that variable f0 is not used,
+-- and we decrement all other indices by 1. This allows us to
 -- also decrement the scope by one.
 
 --- >>> strengthen1Fin (f0 :: Fin (S N3)) :: Maybe (Fin N3)
@@ -174,20 +174,20 @@ f3 = FS f2
 strengthen1Fin :: forall n. SNatI n => Fin (S n) -> Maybe (Fin n)
 strengthen1Fin = strengthenRecFin s0 s1 snat
 
--- We implement strengthening with the following operation that 
+-- We implement strengthening with the following operation that
 -- generalizes the induction hypothesis, so that we can strengthen
 -- in the middle of the scope. The scope of the Fin should have the form
--- k + (m + n)  
+-- k + (m + n)
 
 -- Indices in the middle part of the scope `m` are "strengthened" away.
 
 --- >>> strengthenRecFin s1 s1 s2 (f1 :: Fin (N1 + N1 + N2)) :: Maybe (Fin (N1 + N2))
 -- Nothing
 
--- Variables that are in the first part of the scope `k` (the ones that have 
+-- Variables that are in the first part of the scope `k` (the ones that have
 -- most recently entered the context) do not change when strengthening.
 
---- >>> strengthenRecFin s1 s1 s2 (f0 :: Fin (N1 + N1 + N2)) 
+--- >>> strengthenRecFin s1 s1 s2 (f0 :: Fin (N1 + N1 + N2))
 -- Just 0
 
 -- Variables in the last part of the scope `n` are decremented by strengthening
@@ -200,11 +200,11 @@ strengthen1Fin = strengthenRecFin s0 s1 snat
 
 strengthenRecFin :: SNat k -> SNat m -> SNat n -> Fin (k + (m + n)) -> Maybe (Fin (k + n))
 strengthenRecFin SZ SZ n x = Just x  -- Base case: k = 0, m = 0
-strengthenRecFin SZ (snat_ -> SS_ m) n FZ = Nothing  
+strengthenRecFin SZ (snat_ -> SS_ m) n FZ = Nothing
   -- Case: k = 0, m > 0, and x is in the `m` range
-strengthenRecFin SZ (snat_ -> SS_ m) n (FS x) = 
-    strengthenRecFin SZ m n x 
-strengthenRecFin (snat_ -> SS_ k) m n FZ = Just FZ  
+strengthenRecFin SZ (snat_ -> SS_ m) n (FS x) =
+    strengthenRecFin SZ m n x
+strengthenRecFin (snat_ -> SS_ k) m n FZ = Just FZ
   -- Case: x < k, leave it alone
-strengthenRecFin (snat_ -> SS_ k) m n (FS x) = 
-    FS <$> strengthenRecFin k m n x 
+strengthenRecFin (snat_ -> SS_ k) m n (FS x) =
+    FS <$> strengthenRecFin k m n x

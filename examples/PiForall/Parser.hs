@@ -28,9 +28,9 @@ import qualified Data.Set as S
 import Data.Functor (($>))
 import Control.Monad (void, forM_)
 
-{- 
+{-
 
-Concrete syntax for the language: 
+Concrete syntax for the language:
 Optional components in this BNF are marked with < >
 
   terms:
@@ -43,7 +43,7 @@ Optional components in this BNF are marked with < >
 
     | (a : A)                  Annotations
     | (a)                      Parens
-    | TRUSTME                  An axiom 'TRUSTME', inhabits all types 
+    | TRUSTME                  An axiom 'TRUSTME', inhabits all types
     | PRINTME                  Show the current goal and context
 
     | let x = a in b           Let expression
@@ -53,7 +53,7 @@ Optional components in this BNF are marked with < >
 
     | Bool                     Boolean type
     | True | False             Boolean values
-    | if a then b else c       If 
+    | if a then b else c       If
 
     | { x : A | B }            Dependent pair type
     | A * B                    Nondependent pair type (syntactic sugar)
@@ -90,13 +90,13 @@ Optional components in this BNF are marked with < >
    - Nondependent function types, like:
 
          A -> B
-        
+
       Get parsed as (_:A) -> B, with a wildcard name for the binder
 
    - Nondependent product types, like:
 
          A * B
-        
+
       Get parsed as { _:A | B }, with a wildcard name for the binder
 
    - You can collapse lambdas, like:
@@ -108,12 +108,12 @@ Optional components in this BNF are marked with < >
    - Natural numbers, like:
 
           3
-        
+
       Get parsed as peano numbers (Succ (Succ (Succ Zero)))
 
 -}
 
--- | Default name (for parsing 'A -> B' as '(_:A) -> B') 
+-- | Default name (for parsing 'A -> B' as '(_:A) -> B')
 wildcardName :: LocalName
 wildcardName = internalName
 
@@ -151,7 +151,7 @@ parseExpr = testParser initialConstructorNames expr
 -- * Lexer definitions
 type LParser a = ParsecT
                     String                      -- The input is a sequence of Char
-                    [Column]                   -- The internal state for Layout tabs 
+                    [Column]                   -- The internal state for Layout tabs
                     (State Syntax.ConstructorNames)
                     a                           -- the type of the object being parsed
 
@@ -259,7 +259,7 @@ reserved = Token.reserved tokenizer
 reservedOp = Token.reservedOp tokenizer
 
 parens, brackets, braces :: LParser a -> LParser a
-parens = Token.parens tokenizer 
+parens = Token.parens tokenizer
 brackets = Token.brackets tokenizer
 braces = Token.braces tokenizer
 
@@ -444,7 +444,7 @@ factor = choice [ varOrCon   <?> "a variable or nullary data constructor"
                 , refl       <?> "Refl"
                 , contra     <?> "a contra"
                 , trustme    <?> "TRUSTME"
-                , printme    <?> "PRINTME" 
+                , printme    <?> "PRINTME"
 
                 , bconst     <?> "a constant"
                 , ifExpr     <?> "an if expression"
@@ -465,7 +465,7 @@ typen =
      return TyType
 
 
-  -- Lambda abstractions have the syntax '\x [y] z . e' 
+  -- Lambda abstractions have the syntax '\x [y] z . e'
 lambda :: LParser Term
 lambda = do reservedOp "\\"
             binds <- many1 (try (brackets variable) <|> variable)
@@ -496,7 +496,7 @@ ifExpr =
                      Branch (PatCon "False" []) c])
 
 
--- 
+--
 letExpr :: LParser Term
 letExpr =
   do reserved "let"
@@ -537,7 +537,7 @@ expProdOrAnnotOrParens =
                      expr
 
     middle :: LParser InParens
-    middle = 
+    middle =
       choice [do e1 <- try (term >>= (\e1 -> colon >> return e1))
                  Colon e1 <$> expr
              , do e1 <- try (term >>= (\e1 -> comma >> return e1))
@@ -549,7 +549,7 @@ expProdOrAnnotOrParens =
     --    in which case you might be looking at an explicit pi type.
     beforeBinder :: LParser InParens
     beforeBinder = parens middle <|> brackets middle
-        
+
   in
     do bd <- beforeBinder
        case bd of
@@ -562,13 +562,13 @@ expProdOrAnnotOrParens =
            return $ DataCon "Prod" [a, b]
          Nope a    -> return a
 
--- patterns are 
+-- patterns are
 -- p :=  x
 --       _
 --       K ap*
 --       (p)
 --       (p, p)
--- ap ::= [p] | p        
+-- ap ::= [p] | p
 
 -- Note that 'dconstructor' and 'variable' overlaps, annoyingly.
 pattern :: LParser Pattern

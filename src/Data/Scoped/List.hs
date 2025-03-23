@@ -1,14 +1,14 @@
 -- This module defines a type of lists indexed by their scope
--- The lists are homogenous, and every type in the list must have the 
+-- The lists are homogenous, and every type in the list must have the
 -- same scope.
--- This module is intended to be used with the OverloadedLists 
+-- This module is intended to be used with the OverloadedLists
 -- Haskell language extension.
 module Data.Scoped.List where
 
 import Data.Nat
 import Data.Kind
 import GHC.IsList
-import GHC.Generics 
+import GHC.Generics
 
 import qualified Data.Foldable as F
 import qualified Control.Monad as M
@@ -21,11 +21,11 @@ data List :: (Nat -> Type) -> Nat -> Type where
    Nil  :: List a n
    (:<) :: a n -> List a n -> List a n
 
-deriving instance Generic1 a => Generic1 (List a)      
+deriving instance Generic1 a => Generic1 (List a)
 deriving instance Ord (a n) => Ord (List a n)
 deriving instance Eq (a n) => Eq (List a n)
 deriving instance Read (a n) => Read (List a n)
-deriving instance Show (a n) => Show (List a n) 
+deriving instance Show (a n) => Show (List a n)
 deriving instance Generic (a n) => Generic (List a n)
 instance Semigroup (List a n) where
    Nil <> l = l
@@ -55,13 +55,13 @@ instance IsList (List v n) where
 
    fromList :: [Item (List v n)] -> List v n
    fromList = F.foldr (:<) Nil
-   
+
    toList :: List v n -> [Item (List v n)]
    toList Nil = []
    toList (x :< xs) = x : toList xs
 
--- This type doesn't have the right kind to be 
--- part of the Foldable type class. But we can redefine 
+-- This type doesn't have the right kind to be
+-- part of the Foldable type class. But we can redefine
 -- the foldable operations anyways.
 -- https://hackage.haskell.org/package/base-4.21.0.0/docs/Data-Foldable.html
 
@@ -98,7 +98,7 @@ null x = F.null (toList x)
 length :: IsList l => l -> Int
 length x = F.length (toList x)
 
-elem :: (Eq (Item l), IsList l) => Item l -> l -> Bool 
+elem :: (Eq (Item l), IsList l) => Item l -> l -> Bool
 elem a x = F.elem a (toList x)
 
 maximum :: (Ord (Item l), IsList l) => l -> Item l
