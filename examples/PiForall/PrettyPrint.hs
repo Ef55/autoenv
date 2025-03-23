@@ -328,7 +328,7 @@ instance Display n (Term n) where
   display (Global x) = return $ PP.pretty x   -- TODO
   display (Var n) = do
     s <- scope
-    return (PP.pretty (show (scope_names s Vec.! n)))
+    return (PP.pretty (show (scope_data s Vec.! n)))
   display a@(Lam b) = do
     n <- asks prec
     (binds, body) <- withPrec levelLam $ gatherBinders a

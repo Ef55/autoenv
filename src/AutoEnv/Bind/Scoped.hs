@@ -40,9 +40,9 @@ scopedSize :: forall pat p. ScopedSized pat => pat p -> SNat (ScopedSize pat)
 scopedSize = size
 
 -- And we give the `names` function a similar type
-scopedNames :: (ScopedSized pat, Named name (pat p)) =>
-                pat p -> Vec (ScopedSize pat) name
-scopedNames = names
+scopedData :: (ScopedSized pat, Linearize (pat p) d) =>
+                pat p -> Vec (ScopedSize pat) d
+scopedData = linearize
 
 scopedPatEq :: (ScopedSized pat1, ScopedSized pat2, PatEq (pat1 p1) (pat2 p2)) =>
     pat1 p1 -> pat2 p2 -> Maybe (ScopedSize pat1 :~: ScopedSize pat2)
@@ -220,8 +220,8 @@ class (forall p. ScopedSized (pat p),
 iscopedSize :: IScopedSized pat => pat p n -> SNat p
 iscopedSize = scopedSize
 
-iscopedNames :: (IScopedSized pat, Named name (pat p n)) => pat p n -> Vec p name
-iscopedNames = scopedNames
+iscopedData :: (IScopedSized pat, Linearize (pat p n) d) => pat p n -> Vec p d
+iscopedData = scopedData
 
 iscopedPatEq :: (IScopedSized pat1, IScopedSized pat2, PatEq (pat1 p1 n1) (pat2 p2 n2)) =>
     pat1 p1 n1 -> pat2 p2 n2 -> Maybe (p1 :~: p2)
@@ -241,6 +241,9 @@ data TeleList (pat :: Nat -> Nat -> Type) p n where
     ( IScopedSized pat,
       p2 + (p1 + n) ~ (p2 + p1) + n) =>
     pat p1 n -> TeleList pat p2 (p1 + n) -> TeleList pat (p2 + p1) n
+
+class TeleListData (pat :: Nat -> Nat -> Type) d | pat -> d
+instance (TeleListData pat d) => TeleListData (TeleList pat) d
 
 lengthTele :: TeleList pat p n -> Int
 lengthTele TNil = 0
@@ -263,11 +266,11 @@ instance Sized (TeleList pat p n) where
   size TNil = s0
   size (TCons p1 p2) = sPlus (size p2) (iscopedSize p1)
 
-instance (forall p1 n. Named name (pat p1 n),
-          IScopedSized pat) => Named name (TeleList pat p n) where
-  names TNil = VNil
-  names (TCons p ps) =
-        Vec.append (names ps) (iscopedNames p)
+instance (TeleListData pat d, forall p1 n. Linearize (pat p1 n) d,
+          IScopedSized pat) => Linearize (TeleList pat p n) d where
+  linearize TNil = VNil
+  linearize (TCons p ps) =
+        Vec.append (linearize ps) (iscopedData p)
 
 instance (IScopedSized pat, Subst v v, forall p. Subst v (pat p)) =>
   Subst v (TeleList pat p) where

@@ -97,6 +97,14 @@ class Sized (t :: Type) where
 class PatEq (t1 :: Type) (t2 :: Type) where
     patEq :: t1 -> t2 -> Maybe (Size t1 :~: Size t2)
 
+-- | Linearize a pattern into a vector of bindings
+class (Sized p) => Linearize p d | p -> d where
+  {-# MINIMAL (linearize) | (getBinder) #-}
+  linearize :: p -> Vec (Size p) d
+  linearize pat = withSNat (size pat) (getBinder pat <$> Vec.universe @(Size p))
+  getBinder :: p -> Fin (Size p) -> d
+  getBinder p i = linearize p Vec.! i
+
 ---------------------------------------------------------
 -- Pattern Class Instances for Prelude and Lib Types
 ---------------------------------------------------------
@@ -109,6 +117,9 @@ instance Sized LocalName where
 
 instance PatEq LocalName LocalName where
   patEq p1 p2 = Just Refl
+
+instance Linearize LocalName LocalName where
+  linearize = Vec.singleton
 
 -- ** SNats
 instance Sized (SNat n) where
