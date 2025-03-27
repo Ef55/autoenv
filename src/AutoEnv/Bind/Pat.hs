@@ -28,6 +28,7 @@ import AutoEnv.Classes
 import Data.FinAux (Fin)
 import Data.FinAux qualified as Fin
 import Data.Vec qualified as Vec
+import AutoEnv.DependentScope (WithData (..), Telescope (..), append)
 
 ----------------------------------------------------------
 -- Bind type
@@ -224,3 +225,8 @@ instance (forall p. Named name (pat p)) => Named name (PatList pat p) where
   names PNil = VNil
   names (PCons (p1 :: pat p1) (ps :: PatList pat ps)) =
     Vec.append @ps @p1 (names ps) (names p1)
+
+instance (forall p n. WithData (pat p) u s n) => WithData (PatList pat p) u s n where
+  getData PNil = TNil
+  getData (PCons (p1 :: pat p1) (ps :: PatList pat ps)) =
+    snd$ append (getData ps) (getData p1)

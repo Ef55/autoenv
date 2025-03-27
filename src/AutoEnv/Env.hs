@@ -67,7 +67,6 @@ data Env (a :: Nat -> Type) (n :: Nat) (m :: Nat) where
   Cons :: (a m) -> !(Env a n m) -> Env a ('S n) m --  extend a substitution (like cons)
   (:<>) :: !(Env a m n) -> !(Env a n p) -> Env a m p --  compose substitutions
 
---  Value of the index x in the substitution s
 applyEnv :: (SubstVar a) => Env a n m -> Fin n -> a m
 applyEnv Zero x = case x of {}
 applyEnv (Inc m) x = var (Fin.shiftN m x)
